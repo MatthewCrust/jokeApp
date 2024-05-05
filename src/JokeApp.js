@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './JokeApp.css';
 
 function JokeApp() {
@@ -6,10 +6,31 @@ function JokeApp() {
   const [jokeTwo, setJokeTwo] = useState('');
   const [jokeType, setJokeType] = useState('');
   const [jokeCategory, setJokeCategory] = useState('/Any');
+  const [favorites, setFavorites] = useState([]);
+  const [bgColor, setBgColor] = useState('#000000');
+  const [profile, setProfile] = useState({
+    username: '',
+    apiCalls: 0
+  });
+
+  useEffect(() => {
+    const savedProfile = JSON.parse(localStorage.getItem('profile'));
+    if (savedProfile) {
+      setProfile(savedProfile);
+    } else {
+      setProfile({ username: '', apiCalls: 0 });
+    }
+  }, []);
+  
+
+  useEffect(() => {
+    localStorage.setItem('profile', JSON.stringify(profile));
+  }, [profile]);
 
   const fetchJoke = () => {
     let apiUrl = `https://v2.jokeapi.dev/joke${jokeCategory}${jokeType}`;
-    setJokeTwo("");
+    setProfile(prevProfile => ({ ...prevProfile, apiCalls: prevProfile.apiCalls + 1 }));
+    setJokeTwo('');
 
     fetch(apiUrl)
       .then(response => {
@@ -31,17 +52,51 @@ function JokeApp() {
       });
   };
 
+  const addToFavorites = () => {
+    const newFavorite = { joke, jokeTwo };
+    setFavorites([...favorites, newFavorite]);
+  };
+
+  const changeBgColor = () => {
+    const newColor = prompt("Enter a color (hexadecimal or CSS color name):", bgColor);
+    if (newColor !== null && newColor !== '') {
+      setBgColor(newColor);
+    }
+  };
+
+  const handleProfileChange = (e) => {
+    const { name, value } = e.target;
+    setProfile(prevProfile => ({
+      ...prevProfile,
+      [name]: value,
+      apiCalls: prevProfile.apiCalls
+    }));
+  };
+  
+
   return (
-    <div className="container">
+    <div className="container" style={{ backgroundColor: bgColor }}>
+      <div className="profileContainer">
+        <label htmlFor="username">Username:</label>
+        <input
+          type="text"
+          id="username"
+          name="username"
+          value={profile.username}
+          onChange={handleProfileChange}
+        />
+        <p>API Calls: {profile.apiCalls}</p>
+      </div>
+      <button className="colorButton" onClick={changeBgColor}>Change Background Color</button>
       <h1 className="title">Joke App</h1>
       {joke && (
         <div className="jokeContainer">
           <p className="jokeOnePart">{joke}</p>
           <p className="jokeTwoPart">{jokeTwo}</p>
+          <button className="button" onClick={addToFavorites}>Add to Favorites</button>
         </div>
       )}
       <div className="filters">
-
         <div className='cat'>
           <label htmlFor="jokeCategory">Select Joke Category </label>
           <select
@@ -71,7 +126,22 @@ function JokeApp() {
           </select>
         </div>
       </div>
-      <button className="button" onClick={fetchJoke}>Get Joke</button>
+      <div>
+        <button className="button" onClick={fetchJoke}>Get Joke</button>
+      </div>
+      {favorites.length > 0 && (
+        <div className="favoritesContainer">
+          <h2>Favorites</h2>
+          <div className="favoritesList">
+            {favorites.map((fav, index) => (
+              <div key={index} className="favoriteJoke">
+                <p>{fav.joke}</p>
+                {fav.jokeTwo && <p>{fav.jokeTwo}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
